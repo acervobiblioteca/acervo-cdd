@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo Público de Acervo - Biblioteca Comunitária</title>
+  
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <!-- PapaParse para conversão automática do CSV da Planilha -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <style>
+    /* Estilização personalizada para etiquetas de lombada SBPE */
+    .badge-verde { background-color: #10B981; color: white; }
+    .badge-rosa-claro { background-color: #F472B6; color: white; }
+    .badge-azul-celeste { background-color: #38BDF8; color: white; }
+    .badge-laranja { background-color: #FB923C; color: white; }
+    .badge-azul { background-color: #2563EB; color: white; }
+    .badge-vermelho { background-color: #EF4444; color: white; }
+    .badge-amarelo-fluorescente { background-color: #FACC15; color: black; }
+    .badge-preto { background-color: #1F2937; color: white; }
+    .badge-roxo { background-color: #8B5CF6; color: white; }
+    .badge-rosa-escuro { background-color: #DB2777; color: white; }
+    .badge-amarelo-medio { background-color: #EAB308; color: black; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col justify-between">
+
+  <!-- BARRA DE NAVEGAÇÃO / HEADER -->
+  <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-3">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-book-bookmark text-2xl text-amber-300"></i>
+        <div>
+          <h1 class="text-xl font-bold leading-tight">Biblioteca Comunitária</h1>
+          <p class="text-xs text-indigo-200">Consultas e Pesquisa do Acervo</p>
+        </div>
+      </div>
+
+      <!-- Indicador de total de livros cadastrados -->
+      <div id="totalBadge" class="bg-indigo-800 text-indigo-100 text-xs font-semibold px-3 py-1.5 rounded-full border border-indigo-500 hidden">
+        <i class="fa-solid fa-books mr-1"></i> <span id="totalLivros">0</span> obras catalogadas
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="max-w-6xl mx-auto px-4 py-6 w-full flex-1">
+
+    <!-- CONTROLES DE BUSCA E FILTROS -->
+    <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-6 space-y-4">
+      
+      <!-- Campo de Pesquisa -->
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <input type="text" id="searchInput" oninput="filtrarLivros()" 
+               placeholder="Pesquise por Título, Autor, Código de Notação ou Assunto..." 
+               class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-sm">
+      </div>
+
+      <!-- Filtro por Padrão de Catalogação -->
+      <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mr-2">Filtros:</span>
+        <button onclick="setFiltro('TODOS')" id="btn-TODOS" class="btn-filtro px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-indigo-600 text-white shadow-sm">Todos</button>
+        <button onclick="setFiltro('SBPE')" id="btn-SBPE" class="btn-filtro px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-600 hover:bg-slate-200">SBPE (Caixa Estante)</button>
+        <button onclick="setFiltro('CDDIR')" id="btn-CDDIR" class="btn-filtro px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-600 hover:bg-slate-200">CDDir (Direito)</button>
+        <button onclick="setFiltro('CDU')" id="btn-CDU" class="btn-filtro px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-600 hover:bg-slate-200">CDU</button>
+        <button onclick="setFiltro('CDD')" id="btn-CDD" class="btn-filtro px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-600 hover:bg-slate-200">CDD</button>
+      </div>
+    </section>
+
+    <!-- ANIMAÇÃO DE CARREGAMENTO -->
+    <div id="loading" class="my-16 flex flex-col items-center justify-center gap-3">
+      <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <p class="text-slate-600 font-medium text-sm">Conectando à planilha do acervo...</p>
+    </div>
+
+    <!-- GRADE DE LIVROS (CARDS VISUAIS COM CAPA) -->
+    <section id="gridLivros" class="hidden grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></section>
+
+    <!-- MENSAGEM QUANDO NENHUM LIVRO FOR ENCONTRADO -->
+    <div id="emptyMessage" class="hidden my-12 text-center text-slate-500 space-y-2">
+      <i class="fa-solid fa-folder-open text-4xl text-slate-300"></i>
+      <p class="font-medium">Nenhum livro encontrado para esta pesquisa ou filtro.</p>
+    </div>
+
+  </main>
+
+  <!-- MODAL DE DETALHES DO LIVRO -->
+  <div id="modalDetalhes" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl relative max-h-[90vh] overflow-y-auto space-y-4">
+      <button onclick="fecharModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
+        <img id="modalCapa" src="" class="w-36 h-52 object-cover rounded-xl shadow-md border border-slate-200" alt="Capa Ampliada">
+        <div class="space-y-2 flex-1 text-center sm:text-left">
+          <span id="modalNotacao" class="inline-block px-2.5 py-1 rounded bg-indigo-100 text-indigo-900 font-mono font-bold text-sm"></span>
+          <h2 id="modalTitulo" class="text-lg font-bold text-slate-900 leading-snug"></h2>
+          <p id="modalAutor" class="text-sm font-medium text-slate-600"></p>
+          <div id="modalBadges" class="pt-1 flex flex-wrap gap-1 justify-center sm:justify-start"></div>
+        </div>
+      </div>
+
+      <div class="border-t border-slate-100 pt-3 space-y-2 text-xs text-slate-700">
+        <div><strong class="text-slate-900">Assunto:</strong> <span id="modalAssunto"></span></div>
+        <div id="boxCorLombada"><strong class="text-slate-900">Cor de Lombada:</strong> <span id="modalCor"></span></div>
+        <div><strong class="text-slate-900">Exemplar:</strong> <span id="modalExemplar"></span></div>
+        <div><strong class="text-slate-900">Volume:</strong> <span id="modalVolume"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RODAPÉ -->
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 mt-8">
+    <p>© Biblioteca Comunitária — Sistema Integrado de Catalogação</p>
+  </footer>
+
+  <!-- SCRIPT DE CONEXÃO E RENDERIZAÇÃO -->
+  <script>
+    const SPREADSHEET_ID = '1qp9NMs2qTPEjd9ks5TjG3Gq27A6zWnqfhVZM0kJB6gw';
+    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv`;
+
+    let acervoCompleto = [];
+    let filtroAtual = 'TODOS';
+
+    // Inicialização automática ao carregar a página
+    window.addEventListener('DOMContentLoaded', carregarAcervo);
+
+    function carregarAcervo() {
+      Papa.parse(CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          acervoCompleto = results.data.map(item => ({
+            notacao: item['Código / Notação'] || '',
+            exemplar: item['Exemplar'] || '',
+            volume: item['Volume'] || '',
+            titulo: item['Título da Obra'] || '',
+            autor: item['Autor / Organizador'] || '',
+            assunto: item['Assunto (Acervo)'] || '',
+            cor: item['Cor da Lombada'] || 'N/A',
+            capa: item['Capa'] || ''
+          }));
+
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('totalBadge').classList.remove('hidden');
+          document.getElementById('totalLivros').innerText = acervoCompleto.length;
+          document.getElementById('gridLivros').classList.remove('hidden');
+
+          renderizarLivros(acervoCompleto);
+        },
+        error: function(err) {
+          document.getElementById('loading').innerHTML = `
+            <div class="text-red-600 text-center p-4">
+              <i class="fa-solid fa-circle-exclamation text-3xl mb-2"></i>
+              <p class="font-bold">Erro ao carregar os dados da planilha.</p>
+              <p class="text-xs text-slate-500">Verifique se a planilha está compartilhada publicamente.</p>
+            </div>`;
+        }
+      });
+    }
+
+    function renderizarLivros(lista) {
+      const grid = document.getElementById('gridLivros');
+      const emptyMsg = document.getElementById('emptyMessage');
+      grid.innerHTML = '';
+
+      if (lista.length === 0) {
+        emptyMsg.classList.remove('hidden');
+        return;
+      }
+
+      emptyMsg.classList.add('hidden');
+
+      lista.forEach((livro, index) => {
+        const card = document.createElement('div');
+        card.className = "bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md border border-slate-200 transition cursor-pointer flex flex-col justify-between group";
+        card.onclick = () => abrirModal(livro);
+
+        const capaSrc = livro.capa ? livro.capa : 'https://via.placeholder.com/200x300?text=Sem+Capa';
+
+        card.innerHTML = `
+          <div>
+            <div class="relative w-full h-48 bg-slate-100 overflow-hidden">
+              <img src="${capaSrc}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" alt="${livro.titulo}">
+              ${livro.cor && livro.cor !== 'N/A' ? `<span class="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded shadow ${getBadgeColorClass(livro.cor)}">${livro.cor}</span>` : ''}
+            </div>
+            <div class="p-3">
+              <span class="inline-block text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded mb-1">${livro.notacao || 'N/A'}</span>
+              <h3 class="text-xs font-bold text-slate-900 line-clamp-2 leading-snug">${livro.titulo || 'Sem Título'}</h3>
+              <p class="text-[11px] text-slate-500 truncate mt-0.5">${livro.autor || 'Autor Desconhecido'}</p>
+            </div>
+          </div>
+          <div class="px-3 pb-3 pt-1 border-t border-slate-50 flex justify-between items-center text-[10px] text-slate-400">
+            <span>${livro.exemplar ? livro.exemplar : '1º Ex.'}</span>
+            <i class="fa-solid fa-chevron-right text-slate-300"></i>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    function setFiltro(modo) {
+      filtroAtual = modo;
+      document.querySelectorAll('.btn-filtro').forEach(btn => {
+        btn.className = "btn-filtro px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-100 text-slate-600 hover:bg-slate-200";
+      });
+
+      const btnSel = document.getElementById('btn-' + modo);
+      btnSel.className = "btn-filtro px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-indigo-600 text-white shadow-sm";
+
+      filtrarLivros();
+    }
+
+    function filtrarLivros() {
+      const termo = document.getElementById('searchInput').value.toLowerCase().trim();
+
+      const filtrados = acervoCompleto.filter(item => {
+        const atendeTexto = (item.titulo.toLowerCase().includes(termo) ||
+                             item.autor.toLowerCase().includes(termo) ||
+                             item.notacao.toLowerCase().includes(termo) ||
+                             item.assunto.toLowerCase().includes(termo));
+
+        if (!atendeTexto) return false;
+
+        if (filtroAtual === 'SBPE') {
+          return item.cor && item.cor !== 'N/A';
+        } else if (filtroAtual === 'CDDIR') {
+          return item.notacao.startsWith('34');
+        } else if (filtroAtual === 'CDU' || filtroAtual === 'CDD') {
+          return item.cor === 'N/A' && !item.notacao.startsWith('34');
+        }
+
+        return true;
+      });
+
+      renderizarLivros(filtrados);
+    }
+
+    function abrirModal(livro) {
+      document.getElementById('modalCapa').src = livro.capa ? livro.capa : 'https://via.placeholder.com/200x300?text=Sem+Capa';
+      document.getElementById('modalNotacao').innerText = livro.notacao || 'Sem Notação';
+      document.getElementById('modalTitulo').innerText = livro.titulo || 'Sem Título';
+      document.getElementById('modalAutor').innerText = livro.autor || 'Autor não informado';
+      document.getElementById('modalAssunto').innerText = livro.assunto || 'N/A';
+      document.getElementById('modalExemplar').innerText = livro.exemplar || '1º Exemplar (Padrão)';
+      document.getElementById('modalVolume').innerText = livro.volume || 'N/A';
+
+      const boxCor = document.getElementById('boxCorLombada');
+      if (livro.cor && livro.cor !== 'N/A') {
+        boxCor.classList.remove('hidden');
+        document.getElementById('modalCor').innerText = livro.cor;
+      } else {
+        boxCor.classList.add('hidden');
+      }
+
+      document.getElementById('modalDetalhes').classList.remove('hidden');
+    }
+
+    function fecharModal() {
+      document.getElementById('modalDetalhes').classList.add('hidden');
+    }
+
+    function getBadgeColorClass(cor) {
+      const c = cor.toLowerCase().trim();
+      if (c.includes('verde')) return 'badge-verde';
+      if (c.includes('rosa claro')) return 'badge-rosa-claro';
+      if (c.includes('azul celeste')) return 'badge-azul-celeste';
+      if (c.includes('laranja')) return 'badge-laranja';
+      if (c.includes('azul')) return 'badge-azul';
+      if (c.includes('vermelho')) return 'badge-vermelho';
+      if (c.includes('amarelo fluorescente')) return 'badge-amarelo-fluorescente';
+      if (c.includes('preto')) return 'badge-preto';
+      if (c.includes('roxo')) return 'badge-roxo';
+      if (c.includes('rosa escuro')) return 'badge-rosa-escuro';
+      if (c.includes('amarelo')) return 'badge-amarelo-medio';
+      return 'bg-slate-700 text-white';
+    }
+  </script>
+</body>
+</html>
