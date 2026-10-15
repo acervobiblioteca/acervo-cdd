@@ -11,7 +11,6 @@
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col justify-between">
 
-  <!-- CABEÇALHO DEDICADO À BIBLIOTECA CDD -->
   <header class="bg-sky-700 text-white shadow-md sticky top-0 z-30">
     <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-3">
       <div class="flex items-center gap-3">
@@ -28,10 +27,7 @@
     </div>
   </header>
 
-  <!-- CONTEÚDO PRINCIPAL -->
   <main class="max-w-6xl mx-auto px-4 py-6 w-full flex-1">
-
-    <!-- CAMPO DE PESQUISA -->
     <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-6">
       <div class="relative">
         <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
@@ -41,24 +37,19 @@
       </div>
     </section>
 
-    <!-- ANIMAÇÃO DE CARREGAMENTO -->
     <div id="loading" class="my-16 flex flex-col items-center justify-center gap-3">
       <div class="w-12 h-12 border-4 border-sky-600 border-t-transparent rounded-full animate-spin"></div>
       <p class="text-slate-600 font-medium text-sm">A carregar acervo CDD...</p>
     </div>
 
-    <!-- GRADE DE CARDS DOS LIVROS -->
     <section id="gridLivros" class="hidden grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></section>
 
-    <!-- MENSAGEM SE NÃO ENCONTRAR RESULTADOS -->
     <div id="emptyMessage" class="hidden my-12 text-center text-slate-500 space-y-2">
       <i class="fa-solid fa-folder-open text-4xl text-slate-300"></i>
       <p class="font-medium">Nenhum livro encontrado na biblioteca CDD.</p>
     </div>
-
   </main>
 
-  <!-- MODAL DE DETALHES -->
   <div id="modalDetalhes" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl relative max-h-[90vh] overflow-y-auto space-y-4">
       <button onclick="fecharModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
@@ -87,8 +78,7 @@
   </footer>
 
   <script>
-    // ID da Planilha exclusiva do CDD
-    const SPREADSHEET_ID = '1qp9NMs2qTPEjd9ks5TjG3Gq27A6zWnqfhVZM0kJB6gw';
+    const SPREADSHEET_ID = '1WJWlIq-3gEtzJVw85Roo98mTJdtII9ZWu1tM281_rko';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv`;
 
     let acervoCompleto = [];
